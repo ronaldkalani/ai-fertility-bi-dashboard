@@ -27,72 +27,95 @@ if "ReferralSource" not in df.columns:
     df["ReferralSource"] = np.random.choice(["Google Ads", "OB-GYN", "Webinar", "Instagram", "Family Doctor"], len(df))
 if "No_show" not in df.columns:
     df["No_show"] = np.random.choice(["Yes", "No"], size=len(df))
+if "SMS_received" not in df.columns:
+    df["SMS_received"] = np.random.choice([0, 1], size=len(df))
+if "ScheduledDay" not in df.columns or "AppointmentDay" not in df.columns:
+    df["WaitDays"] = np.random.randint(1, 20, size=len(df))
+else:
+    df["WaitDays"] = (pd.to_datetime(df["AppointmentDay"]) - pd.to_datetime(df["ScheduledDay"])).dt.days
 
-# Create Dropdown for Filtering
-parameters = st.multiselect("Filter by parameters", options=["TreatmentType", "ReferralSource", "Neighbourhood"])
-filtered_df = df.copy()
-for param in parameters:
-    if param in df.columns:
-        selected_value = st.selectbox(f"Select {param}", options=df[param].dropna().unique())
-        filtered_df = filtered_df[filtered_df[param] == selected_value]
+# Metric Viewer Dropdown
+st.sidebar.header("📊 Select Metric to View")
+metric_option = st.sidebar.selectbox("Choose a KPI", [
+    "Average Satisfaction Score by Treatment Type",
+    "Predicted No-Show Risk",
+    "Total Appointments",
+    "No-Show Rate (%)",
+    "Average Wait Time (days)",
+    "Proportion of SMS Reminders Sent",
+    "Appointment Volume by Region",
+    "Referral Source Breakdown",
+    "Monthly Appointment Trends",
+    "Public Platform Ratings"
+])
 
-# Section 1-2: Satisfaction + No-show
-st.header("1️⃣–2️⃣ Satisfaction & No-Show Risk")
-col1, col2 = st.columns(2)
+# Single-Metric Viewer Logic
+st.header("📈 Key Metric Viewer")
 
-with col1:
-    st.subheader("Avg Satisfaction by Treatment")
-    st.caption("Displays average satisfaction scores across different treatment types.")
+if metric_option == "Average Satisfaction Score by Treatment Type":
     avg_satisfaction = df.groupby("TreatmentType")["SatisfactionScore"].mean().reset_index()
-    fig1, ax1 = plt.subplots()
-    sns.barplot(data=avg_satisfaction, x="TreatmentType", y="SatisfactionScore", palette="Set2", ax=ax1)
-    ax1.set_title("Satisfaction Score by Treatment")
-    st.pyplot(fig1)
+    fig, ax = plt.subplots()
+    sns.barplot(data=avg_satisfaction, x="TreatmentType", y="SatisfactionScore", palette="Set2", ax=ax)
+    ax.set_title("Satisfaction Score by Treatment")
+    st.pyplot(fig)
 
-with col2:
-    st.subheader("Predicted No-Show Risk")
-    st.caption("Assigns high probability (0.85) to 'Yes' and low (0.15) to 'No' no-show labels.")
+elif metric_option == "Predicted No-Show Risk":
     df["NoShowProb"] = df["No_show"].apply(lambda x: 0.85 if x == "Yes" else 0.15)
     st.dataframe(df[["PatientId", "NoShowProb"]].head() if "PatientId" in df.columns else df[["NoShowProb"]].head())
 
-# KPIs
-st.header("3️⃣ Key Performance Metrics")
-if "ScheduledDay" in df.columns and "AppointmentDay" in df.columns:
-    df["WaitDays"] = (pd.to_datetime(df["AppointmentDay"]) - pd.to_datetime(df["ScheduledDay"])).dt.days
-else:
-    df["WaitDays"] = np.random.randint(1, 20, size=len(df))
-k1, k2, k3 = st.columns(3)
-k1.metric("Total Appointments", f"{len(df):,}")
-k2.metric("No-Show Rate", f"{(df['No_show'] == 'Yes').mean() * 100:.2f}%")
-k3.metric("Avg Wait Time", f"{df['WaitDays'].mean():.1f} days")
+elif metric_option == "Total Appointments":
+    st.metric("Total Appointments", f"{len(df):,}")
 
-# SMS + Region
-st.header("4️⃣–5️⃣ Self-Service & Regional Metrics")
-c3, c4 = st.columns(2)
-with c3:
-    st.subheader("SMS Reminders Sent")
-    st.caption("Proportion of patients who received SMS appointment reminders.")
-    if "SMS_received" not in df.columns:
-        df["SMS_received"] = np.random.choice([0, 1], size=len(df))
+elif metric_option == "No-Show Rate (%)":
+    st.metric("No-Show Rate", f"{(df['No_show'] == 'Yes').mean() * 100:.2f}%")
+
+elif metric_option == "Average Wait Time (days)":
+    st.metric("Average Wait Time", f"{df['WaitDays'].mean():.1f} days")
+
+elif metric_option == "Proportion of SMS Reminders Sent":
     sms = df["SMS_received"].value_counts(normalize=True).rename({0: "No SMS", 1: "Received SMS"}) * 100
-    fig2, ax2 = plt.subplots()
-    sms.plot(kind="bar", color=["red", "green"], ax=ax2)
-    ax2.set_title("SMS Reminder Distribution")
-    st.pyplot(fig2)
+    fig, ax = plt.subplots()
+    sms.plot(kind="bar", color=["red", "green"], ax=ax)
+    ax.set_title("SMS Reminder Distribution")
+    st.pyplot(fig)
 
-with c4:
-    st.subheader("Appointments by Region")
-    st.caption("Displays top neighborhoods by appointment volume.")
+elif metric_option == "Appointment Volume by Region":
     if "Neighbourhood" in df.columns:
         reg = df["Neighbourhood"].value_counts().head(10).reset_index()
         reg.columns = ["Neighbourhood", "Appointments"]
-        fig3, ax3 = plt.subplots()
-        sns.barplot(data=reg, x="Appointments", y="Neighbourhood", palette="coolwarm", ax=ax3)
-        st.pyplot(fig3)
+        fig, ax = plt.subplots()
+        sns.barplot(data=reg, x="Appointments", y="Neighbourhood", palette="coolwarm", ax=ax)
+        st.pyplot(fig)
+
+elif metric_option == "Referral Source Breakdown":
+    ref = df["ReferralSource"].value_counts().reset_index()
+    ref.columns = ["Source", "Leads"]
+    fig, ax = plt.subplots()
+    sns.barplot(data=ref, x="Leads", y="Source", palette="magma", ax=ax)
+    st.pyplot(fig)
+
+elif metric_option == "Monthly Appointment Trends":
+    if "AppointmentDay" in df.columns:
+        df["Month"] = pd.to_datetime(df["AppointmentDay"]).dt.strftime("%b")
+        month_df = df["Month"].value_counts().sort_index().reset_index()
+        month_df.columns = ["Month", "Appointments"]
+        fig, ax = plt.subplots()
+        sns.lineplot(data=month_df, x="Month", y="Appointments", marker="o", ax=ax)
+        st.pyplot(fig)
+
+elif metric_option == "Public Platform Ratings":
+    fig, ax = plt.subplots()
+    sns.barplot(data=pd.DataFrame({
+        "Platform": ["Google", "RateMDs", "Facebook"],
+        "Rating": [4.7, 4.6, 4.8]
+    }), x="Platform", y="Rating", palette="Set2", ax=ax)
+    ax.set_title("Public Ratings by Platform")
+    st.pyplot(fig)
+
+# === REMAINING DASHBOARD ===
 
 # Competitor Watch
-st.header("6️⃣ Competitor Watchlist")
-st.caption("Benchmarking performance against local competitors.")
+st.header("🏥 Competitor Watchlist")
 st.dataframe(pd.DataFrame({
     "Clinic": ["TRIO", "CReATe", "Astra"],
     "IVF Success Rate (%)": [63, 61, 58],
@@ -100,7 +123,7 @@ st.dataframe(pd.DataFrame({
 }))
 
 # AI Treatment Suggestion
-st.header("7️⃣ AI Treatment Path Suggestion")
+st.header("🧬 AI Treatment Path Suggestion")
 age = st.slider("Patient Age", 20, 45, 32)
 amh = st.slider("AMH Level", 0.5, 5.0, 2.5)
 if amh < 1.0 or age > 38:
@@ -108,38 +131,8 @@ if amh < 1.0 or age > 38:
 else:
     st.success("Suggested Protocol: Natural IVF")
 
-# Referrals
-st.header("8️⃣ Referral Source Breakdown")
-st.caption("Highlights the most common sources of referrals.")
-ref = df["ReferralSource"].value_counts().reset_index()
-ref.columns = ["Source", "Leads"]
-fig4, ax4 = plt.subplots()
-sns.barplot(data=ref, x="Leads", y="Source", palette="magma", ax=ax4)
-st.pyplot(fig4)
-
-# Seasonality
-st.header("9️⃣ Monthly Appointment Trends")
-st.caption("Shows seasonality trends in patient appointments.")
-if "AppointmentDay" in df.columns:
-    df["Month"] = pd.to_datetime(df["AppointmentDay"]).dt.strftime("%b")
-    month_df = df["Month"].value_counts().sort_index().reset_index()
-    month_df.columns = ["Month", "Appointments"]
-    fig5, ax5 = plt.subplots()
-    sns.lineplot(data=month_df, x="Month", y="Appointments", marker="o", ax=ax5)
-    st.pyplot(fig5)
-
-# Ratings
-st.header("🔟 Public Trust & Transparency")
-st.caption("Average ratings from public platforms.")
-fig6, ax6 = plt.subplots()
-sns.barplot(data=pd.DataFrame({
-    "Platform": ["Google", "RateMDs", "Facebook"],
-    "Rating": [4.7, 4.6, 4.8]
-}), x="Platform", y="Rating", palette="Set2", ax=ax6)
-st.pyplot(fig6)
-
 # Logistic Regression
-st.header("🧠 Logistic Regression Model – Predictive Analytics")
+st.header("🤖 Logistic Regression Model – Predictive Analytics")
 df = df.dropna(subset=["Age", "WaitDays", "No_show", "SMS_received"])
 df["No_show_binary"] = df["No_show"].map({"Yes": 1, "No": 0})
 X = df[["Age", "WaitDays", "SMS_received"]]
@@ -177,6 +170,7 @@ st.markdown("### 📌 Summary")
 st.markdown("""
 This integrated dashboard empowers fertility centers with actionable insights from operational KPIs, patient behavior, marketing channels, and AI-driven no-show predictions. It supports patient satisfaction optimization, strategic planning, and clinical efficiency.
 """)
+
 
 
 
