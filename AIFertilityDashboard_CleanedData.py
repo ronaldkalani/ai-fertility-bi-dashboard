@@ -240,7 +240,7 @@ elif metric_option == "Summary":
 # 📌 Contextual Insights
 if metric_option in INSIGHTS:
     st.markdown("---")
-    st.markdown(f"**🧠 Business Decision It Supports:** {INSIGHTS[metric_option]['Decision']}")
+    st.markdown(f"**🧠 Business Decision:** {INSIGHTS[metric_option]['Decision']}")
     st.markdown(f"**✅ Recommended Action:** {INSIGHTS[metric_option]['Action']}")
 
 
