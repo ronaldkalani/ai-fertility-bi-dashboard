@@ -15,7 +15,7 @@ st.title("📊 AI Fertility Centre – Business Intelligence Dashboard")
 st.markdown("Gain insights into patient behavior, clinic performance, and predictive analytics.")
 
 # Load dataset
-DATA_PATH = "updated_cleaned_appointment.csv"
+DATA_PATH = "cleaned_appointment.csv"
 df = pd.read_csv(DATA_PATH)
 
 # Simulate missing values for demo purposes
