@@ -1,7 +1,10 @@
 streamlit
 pandas
-matplotlib
 numpy
+matplotlib
+seaborn
+scikit-learn
 textblob
 beautifulsoup4
 requests
+
