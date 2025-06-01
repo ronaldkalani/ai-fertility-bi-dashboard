@@ -14,7 +14,7 @@ st.title("📊 AI Fertility Centre – Business Intelligence Dashboard")
 st.markdown("**Track KPIs, AI Insights, Market Intelligence, and Live Customer Feedback**")
 
 # 📂 Load Cleaned Dataset
-DATA_PATH = "C:/Users/HP/FertilityClinic/Cleaned_Appointment_Data.csv"
+DATA_PATH = "cleaned_appointment.csv"
 df = pd.read_csv(DATA_PATH)
 
 # 1️⃣ Patient Satisfaction Monitoring
