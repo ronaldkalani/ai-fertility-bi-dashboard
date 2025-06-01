@@ -9,15 +9,15 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
 
 # Streamlit Page Setup
-st.set_page_config(page_title="AI BI Dashboard", layout="wide")
+st.set_page_config(page_title="AI Fertility BI Dashboard", layout="wide")
 st.title("📊 AI Fertility Centre – Business Intelligence Dashboard")
-st.markdown("This dashboard integrates clinical appointment analytics with predictive modeling to inform operational and clinical decisions.")
+st.markdown("This dashboard integrates clinical appointment analytics with predictive modeling to support informed business decisions.")
 
-# Load dataset
+# Load Data
 DATA_PATH = "cleaned_appointment.csv"
 df = pd.read_csv(DATA_PATH)
 
-# Simulate missing data
+# Simulated fields (for demo)
 if "TreatmentType" not in df.columns:
     df["TreatmentType"] = np.random.choice(["IVF", "IUI", "Egg Freezing", "Donor Program"], len(df))
 if "SatisfactionScore" not in df.columns:
@@ -33,7 +33,7 @@ if "ScheduledDay" not in df.columns or "AppointmentDay" not in df.columns:
 else:
     df["WaitDays"] = (pd.to_datetime(df["AppointmentDay"]) - pd.to_datetime(df["ScheduledDay"])).dt.days
 
-# Preprocess for modeling
+# Preprocessing
 df["No_show_binary"] = df["No_show"].map({"Yes": 1, "No": 0})
 df = df.dropna(subset=["Age", "WaitDays", "SMS_received", "No_show_binary"])
 X = df[["Age", "WaitDays", "SMS_received"]]
@@ -45,7 +45,7 @@ y_pred = model.predict(X_test)
 y_prob = model.predict_proba(X_test)[:, 1]
 fpr, tpr, _ = roc_curve(y_test, y_prob)
 
-# Sidebar Dropdown for Section Selection
+# Sidebar selection
 st.sidebar.header("📊 Select Dashboard Section")
 metric_option = st.sidebar.selectbox("Choose a Metric or Insight", [
     "Average Satisfaction Score by Treatment Type",
@@ -65,9 +65,74 @@ metric_option = st.sidebar.selectbox("Choose a Metric or Insight", [
     "Summary"
 ])
 
-# Dynamic Viewer
+# Dictionary of insights
+INSIGHTS = {
+    "Average Satisfaction Score by Treatment Type": {
+        "Decision": "Improve patient experience per treatment",
+        "Action": "Investigate low-scoring treatment areas; revise protocols or retrain staff."
+    },
+    "Predicted No-Show Risk": {
+        "Decision": "Reduce last-minute cancellations and revenue loss",
+        "Action": "Flag high-risk patients early; reallocate slots or send reminders."
+    },
+    "Total Appointments Summary": {
+        "Decision": "Monitor clinic performance and patient inflow",
+        "Action": "Set monthly/quarterly growth targets and outreach goals."
+    },
+    "No-Show Rate (%)": {
+        "Decision": "Identify systemic inefficiencies in patient engagement",
+        "Action": "Enhance communication or offer flexible rescheduling."
+    },
+    "Average Wait Time (days)": {
+        "Decision": "Optimize booking practices and reduce dropout",
+        "Action": "Adjust provider schedules or redistribute staff resources."
+    },
+    "Proportion of SMS Reminders Sent": {
+        "Decision": "Evaluate impact of communication strategy",
+        "Action": "Boost SMS outreach and track resulting attendance improvements."
+    },
+    "Appointment Volume by Region": {
+        "Decision": "Identify high/low demand areas",
+        "Action": "Target advertising or expand clinics in underserved zones."
+    },
+    "Referral Source Breakdown": {
+        "Decision": "Optimize marketing and referral performance",
+        "Action": "Invest more in high-performing referral sources."
+    },
+    "Monthly Appointment Trends": {
+        "Decision": "Plan staffing based on demand patterns",
+        "Action": "Boost staff during peak months; run promotions in low months."
+    },
+    "Public Platform Ratings": {
+        "Decision": "Improve public image and patient trust",
+        "Action": "Respond to reviews and enhance front-desk training."
+    },
+    "Competitor Watchlist": {
+        "Decision": "Benchmark performance and offerings",
+        "Action": "Adjust pricing or launch new services based on competitors."
+    },
+    "AI Treatment Path Suggestion": {
+        "Decision": "Provide AI-assisted personalized care",
+        "Action": "Integrate AI tools into treatment planning."
+    },
+    "Logistic Regression Model – Predictive Analytics": {
+        "Decision": "Forecast clinic risks (e.g., cancellations)",
+        "Action": "Triage and allocate resources using ML predictions."
+    },
+    "ROC Curve": {
+        "Decision": "Evaluate model reliability for predictions",
+        "Action": "Use ROC to determine decision thresholds."
+    },
+    "Summary": {
+        "Decision": "Enable real-time executive oversight",
+        "Action": "Use dashboard insights during strategy meetings."
+    }
+}
+
+# Show title and metric
 st.header(f"📌 {metric_option}")
 
+# Display appropriate chart/metric
 if metric_option == "Average Satisfaction Score by Treatment Type":
     avg_satisfaction = df.groupby("TreatmentType")["SatisfactionScore"].mean().reset_index()
     fig, ax = plt.subplots()
@@ -77,13 +142,13 @@ if metric_option == "Average Satisfaction Score by Treatment Type":
 
 elif metric_option == "Predicted No-Show Risk":
     df["NoShowProb"] = df["No_show"].apply(lambda x: 0.85 if x == "Yes" else 0.15)
-    st.dataframe(df[["PatientId", "NoShowProb"]].head() if "PatientId" in df.columns else df[["NoShowProb"]].head())
+    st.dataframe(df[["NoShowProb"]].head())
 
 elif metric_option == "Total Appointments Summary":
     st.metric("Total Appointments", f"{len(df):,}")
     st.metric("No-Show Rate", f"{(df['No_show'] == 'Yes').mean() * 100:.2f}%")
-    st.metric("Average Wait Time", f"{df['WaitDays'].mean():.1f} days")
-    st.metric("Average Satisfaction", f"{df['SatisfactionScore'].mean():.2f}/10")
+    st.metric("Avg. Wait Time", f"{df['WaitDays'].mean():.1f} days")
+    st.metric("Avg. Satisfaction", f"{df['SatisfactionScore'].mean():.2f}/10")
 
 elif metric_option == "No-Show Rate (%)":
     st.metric("No-Show Rate", f"{(df['No_show'] == 'Yes').mean() * 100:.2f}%")
@@ -92,7 +157,7 @@ elif metric_option == "Average Wait Time (days)":
     st.metric("Average Wait Time", f"{df['WaitDays'].mean():.1f} days")
 
 elif metric_option == "Proportion of SMS Reminders Sent":
-    sms = df["SMS_received"].value_counts(normalize=True).rename({0: "No SMS", 1: "Received SMS"}) * 100
+    sms = df["SMS_received"].value_counts(normalize=True).rename({0: "No SMS", 1: "SMS Sent"}) * 100
     fig, ax = plt.subplots()
     sms.plot(kind="bar", color=["red", "green"], ax=ax)
     ax.set_title("SMS Reminder Distribution")
@@ -100,10 +165,10 @@ elif metric_option == "Proportion of SMS Reminders Sent":
 
 elif metric_option == "Appointment Volume by Region":
     if "Neighbourhood" in df.columns:
-        reg = df["Neighbourhood"].value_counts().head(10).reset_index()
-        reg.columns = ["Neighbourhood", "Appointments"]
+        vol = df["Neighbourhood"].value_counts().head(10).reset_index()
+        vol.columns = ["Neighbourhood", "Appointments"]
         fig, ax = plt.subplots()
-        sns.barplot(data=reg, x="Appointments", y="Neighbourhood", palette="coolwarm", ax=ax)
+        sns.barplot(data=vol, x="Appointments", y="Neighbourhood", ax=ax)
         st.pyplot(fig)
 
 elif metric_option == "Referral Source Breakdown":
@@ -116,19 +181,19 @@ elif metric_option == "Referral Source Breakdown":
 elif metric_option == "Monthly Appointment Trends":
     if "AppointmentDay" in df.columns:
         df["Month"] = pd.to_datetime(df["AppointmentDay"]).dt.strftime("%b")
-        month_df = df["Month"].value_counts().sort_index().reset_index()
-        month_df.columns = ["Month", "Appointments"]
+        trend = df["Month"].value_counts().sort_index().reset_index()
+        trend.columns = ["Month", "Appointments"]
         fig, ax = plt.subplots()
-        sns.lineplot(data=month_df, x="Month", y="Appointments", marker="o", ax=ax)
+        sns.lineplot(data=trend, x="Month", y="Appointments", marker="o", ax=ax)
         st.pyplot(fig)
 
 elif metric_option == "Public Platform Ratings":
-    fig, ax = plt.subplots()
-    sns.barplot(data=pd.DataFrame({
+    ratings = pd.DataFrame({
         "Platform": ["Google", "RateMDs", "Facebook"],
         "Rating": [4.7, 4.6, 4.8]
-    }), x="Platform", y="Rating", palette="Set2", ax=ax)
-    ax.set_title("Public Ratings by Platform")
+    })
+    fig, ax = plt.subplots()
+    sns.barplot(data=ratings, x="Platform", y="Rating", ax=ax)
     st.pyplot(fig)
 
 elif metric_option == "Competitor Watchlist":
@@ -149,35 +214,35 @@ elif metric_option == "AI Treatment Path Suggestion":
 elif metric_option == "Logistic Regression Model – Predictive Analytics":
     st.subheader("Classification Report")
     st.text(classification_report(y_test, y_pred))
-    st.subheader("Confusion Matrix")
-    fig_cm, ax_cm = plt.subplots()
-    sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues", ax=ax_cm)
-    ax_cm.set_xlabel("Predicted")
-    ax_cm.set_ylabel("Actual")
-    st.pyplot(fig_cm)
+    fig, ax = plt.subplots()
+    sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues", ax=ax)
+    st.pyplot(fig)
 
 elif metric_option == "ROC Curve":
-    fig_roc, ax_roc = plt.subplots()
-    ax_roc.plot(fpr, tpr, label=f"AUC = {auc(fpr, tpr):.2f}")
-    ax_roc.plot([0, 1], [0, 1], 'k--')
-    ax_roc.set_xlabel("False Positive Rate")
-    ax_roc.set_ylabel("True Positive Rate")
-    ax_roc.set_title("ROC Curve")
-    ax_roc.legend()
-    st.pyplot(fig_roc)
+    fig, ax = plt.subplots()
+    ax.plot(fpr, tpr, label=f"AUC = {auc(fpr, tpr):.2f}")
+    ax.plot([0, 1], [0, 1], 'k--')
+    ax.set_title("ROC Curve")
+    ax.legend()
+    st.pyplot(fig)
 
 elif metric_option == "Summary":
-    st.markdown("### 📌 Summary")
+    st.markdown("### 📌 Dashboard Summary")
     st.markdown("""
-    This integrated dashboard empowers fertility centers with actionable insights from:
-    
-    - Operational KPIs (no-show rates, wait time)
-    - Patient behavior and satisfaction
-    - Referral and marketing effectiveness
-    - Predictive AI modeling for no-shows and treatment paths
-    
-    The dashboard supports strategic planning, marketing investments, patient outcomes, and clinical resource optimization.
+    This dashboard equips the clinic with insights into:
+    - Patient attendance behavior
+    - Operational KPIs
+    - Referral performance
+    - Predictive risk modeling
+    - AI-powered treatment suggestions
     """)
+
+# 📌 Contextual Insights
+if metric_option in INSIGHTS:
+    st.markdown("---")
+    st.markdown(f"**🧠 Business Decision It Supports:** {INSIGHTS[metric_option]['Decision']}")
+    st.markdown(f"**✅ Recommended Action:** {INSIGHTS[metric_option]['Action']}")
+
 
 
 
