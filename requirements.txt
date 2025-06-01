@@ -1,0 +1,7 @@
+streamlit
+pandas
+matplotlib
+numpy
+textblob
+beautifulsoup4
+requests
