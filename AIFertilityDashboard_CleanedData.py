@@ -1,3 +1,4 @@
+
 # AIFertilityDashboard_with_LogisticModel.py
 import streamlit as st
 import pandas as pd
@@ -35,6 +36,9 @@ if "ReferralSource" not in df.columns:
 if "No_show" not in df.columns:
     df["No_show"] = np.random.choice(["Yes", "No"], size=len(df))
 
+# Dropdown to filter by TreatmentType
+selected_treatment = st.selectbox("Filter by Treatment Type", df["TreatmentType"].unique())
+
 # 1️⃣–2️⃣ Patient Satisfaction & No-Show Risk
 st.header("1️⃣–2️⃣ Patient Satisfaction & No-Show Risk")
 col1, col2 = st.columns(2)
@@ -42,7 +46,10 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("Avg Satisfaction by Treatment")
     avg_satisfaction = df.groupby("TreatmentType")["SatisfactionScore"].mean().reset_index()
-    st.bar_chart(avg_satisfaction.set_index("TreatmentType"))
+    fig1, ax1 = plt.subplots()
+    sns.barplot(data=avg_satisfaction, x="TreatmentType", y="SatisfactionScore", palette="viridis", ax=ax1)
+    ax1.set_title("Average Satisfaction per Treatment Type")
+    st.pyplot(fig1)
 
 with col2:
     st.subheader("Predicted No-Show Risk")
@@ -69,14 +76,20 @@ with col3:
     if "SMS_received" not in df.columns:
         df['SMS_received'] = np.random.choice([0, 1], size=len(df))
     sms = df['SMS_received'].value_counts(normalize=True).rename({0: "No SMS", 1: "Received SMS"}) * 100
-    st.bar_chart(sms)
+    fig2, ax2 = plt.subplots()
+    sms.plot(kind="bar", color=["red", "green"], ax=ax2)
+    ax2.set_ylabel("Percentage")
+    ax2.set_title("SMS Received Distribution")
+    st.pyplot(fig2)
 
 with col4:
     st.subheader("Appointments by Region")
     if "Neighbourhood" in df.columns:
         region_data = df['Neighbourhood'].value_counts().head(10).reset_index()
         region_data.columns = ['Neighbourhood', 'Appointments']
-        st.bar_chart(region_data.set_index("Neighbourhood"))
+        fig3, ax3 = plt.subplots()
+        sns.barplot(data=region_data, x="Appointments", y="Neighbourhood", palette="coolwarm", ax=ax3)
+        st.pyplot(fig3)
     else:
         st.warning("Neighbourhood column not found.")
 
@@ -102,7 +115,9 @@ else:
 st.header("8️⃣ Referral Source Breakdown")
 ref_data = df["ReferralSource"].value_counts().reset_index()
 ref_data.columns = ["Source", "Leads"]
-st.bar_chart(ref_data.set_index("Source"))
+fig4, ax4 = plt.subplots()
+sns.barplot(data=ref_data, x="Leads", y="Source", palette="magma", ax=ax4)
+st.pyplot(fig4)
 
 # 9️⃣ IVF Seasonality
 st.header("9️⃣ Monthly Appointment Trends")
@@ -110,7 +125,9 @@ if "AppointmentDay" in df.columns:
     df["AppointmentMonth"] = pd.to_datetime(df["AppointmentDay"]).dt.strftime("%b")
     season_df = df["AppointmentMonth"].value_counts().sort_index().reset_index()
     season_df.columns = ["Month", "Appointments"]
-    st.line_chart(season_df.set_index("Month"))
+    fig5, ax5 = plt.subplots()
+    sns.lineplot(data=season_df, x="Month", y="Appointments", marker="o", ax=ax5)
+    st.pyplot(fig5)
 else:
     st.warning("AppointmentDay column not found.")
 
@@ -120,9 +137,12 @@ reviews = pd.DataFrame({
     "Platform": ["Google", "RateMDs", "Facebook"],
     "Avg Rating": [4.7, 4.6, 4.8]
 })
-st.bar_chart(reviews.set_index("Platform"))
+fig6, ax6 = plt.subplots()
+sns.barplot(data=reviews, x="Platform", y="Avg Rating", palette="Set2", ax=ax6)
+st.pyplot(fig6)
 
 # Logistic Regression Model
+
 st.header("Predictive Model – Logistic Regression")
 df = df.dropna(subset=["Age", "WaitDays", "No_show", "SMS_received"])
 df["No_show_binary"] = df["No_show"].map({"Yes": 1, "No": 0})
@@ -159,36 +179,4 @@ ax_roc.set_ylabel("True Positive Rate")
 ax_roc.set_title("ROC Curve")
 ax_roc.legend(loc="lower right")
 st.pyplot(fig_roc)
-
-# Competitor Review Sentiment
-st.header("Competitor Review Sentiment")
-clinics = {
-    "TRIO Fertility": "https://www.ratemds.com/clinic/ca-on-toronto-trio-fertility/",
-    "CReATe Fertility": "https://www.ratemds.com/clinic/ca-on-toronto-create/",
-    "Mount Sinai Fertility": "https://www.ratemds.com/clinic/ca-on-toronto-mount-sinai/"
-}
-
-def scrape_reviews(url):
-    try:
-        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-        soup = BeautifulSoup(response.text, "html.parser")
-        return [p.get_text(strip=True) for p in soup.find_all("p") if len(p.get_text()) > 20][:10]
-    except:
-        return []
-
-def analyze_sentiment(reviews):
-    polarities = [TextBlob(r).sentiment.polarity for r in reviews]
-    subjectivities = [TextBlob(r).sentiment.subjectivity for r in reviews]
-    return sum(polarities)/len(polarities), sum(subjectivities)/len(subjectivities)
-
-sentiment_data = []
-for clinic, url in clinics.items():
-    texts = scrape_reviews(url)
-    if texts:
-        polarity, subjectivity = analyze_sentiment(texts)
-        sentiment_data.append({"Clinic": clinic, "Polarity": polarity, "Subjectivity": subjectivity})
-
-sentiment_df = pd.DataFrame(sentiment_data)
-st.bar_chart(sentiment_df.set_index("Clinic")[["Polarity"]])
-st.dataframe(sentiment_df)
 
