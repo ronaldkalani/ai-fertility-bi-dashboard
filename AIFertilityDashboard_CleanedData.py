@@ -65,7 +65,7 @@ metric_option = st.sidebar.selectbox("Choose a Metric or Insight", [
     "Summary"
 ])
 
-# Dictionary of insights
+# Business decision/action info
 INSIGHTS = {
     "Average Satisfaction Score by Treatment Type": {
         "Decision": "Improve patient experience per treatment",
@@ -129,10 +129,26 @@ INSIGHTS = {
     }
 }
 
-# Show title and metric
+# Logic for AI Treatment Path Suggestion
+def suggest_treatment(age, amh):
+    if amh < 0.8 and age >= 40:
+        return "Donor Program"
+    elif amh < 1.5 and age >= 38:
+        return "IVF"
+    elif 1.5 <= amh < 3.5 and age >= 35:
+        return "IVF"
+    elif 1.5 <= amh < 3.5 and age < 35:
+        return "Natural IVF"
+    elif amh >= 3.5 and age <= 34:
+        return "Egg Freezing"
+    elif 2.0 <= amh <= 4.5 and age < 33:
+        return "IUI"
+    else:
+        return "Further Evaluation"
+
+# Main Display Logic
 st.header(f"📌 {metric_option}")
 
-# Display appropriate chart/metric
 if metric_option == "Average Satisfaction Score by Treatment Type":
     avg_satisfaction = df.groupby("TreatmentType")["SatisfactionScore"].mean().reset_index()
     fig, ax = plt.subplots()
@@ -206,10 +222,8 @@ elif metric_option == "Competitor Watchlist":
 elif metric_option == "AI Treatment Path Suggestion":
     age = st.slider("Patient Age", 20, 45, 32)
     amh = st.slider("AMH Level", 0.5, 5.0, 2.5)
-    if amh < 1.0 or age > 38:
-        st.warning("Suggested Protocol: Aggressive IVF")
-    else:
-        st.success("Suggested Protocol: Natural IVF")
+    protocol = suggest_treatment(age, amh)
+    st.success(f"Suggested Protocol: {protocol}")
 
 elif metric_option == "Logistic Regression Model – Predictive Analytics":
     st.subheader("Classification Report")
@@ -237,7 +251,7 @@ elif metric_option == "Summary":
     - AI-powered treatment suggestions
     """)
 
-# 📌 Contextual Insights
+# Contextual Business Decision & Action
 if metric_option in INSIGHTS:
     st.markdown("---")
     st.markdown(f"**🧠 Business Decision:** {INSIGHTS[metric_option]['Decision']}")
