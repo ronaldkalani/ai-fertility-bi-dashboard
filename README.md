@@ -145,3 +145,6 @@ Looking forward, Artificial General Intelligence (AGI) could:
 - Hugging Face Transformers
 
 - Fertility KPIs – CFAS Benchmarks & CARTR+ Database
+
+## Developer:
+          # Ronald Kalani, Master of Science in Technology Management (MSc), Graduate Certificates (GC) in Artificial Intelligence, Regulatory Affairs, and Bioinformatics
